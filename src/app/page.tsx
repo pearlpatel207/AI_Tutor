@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import LogoutButton from "@/components/LogoutButton";
 
 const PdfViewer = dynamic(() => import("@/components/PdfViewer"), {
   ssr: false,
@@ -16,28 +17,19 @@ export default function Home() {
       const file = e.target.files[0];
       const url = URL.createObjectURL(file);
       setPdfUrl(url);
-
-      // // Send file to API to parse
-      // const formData = new FormData();
-      // formData.append("file", file);
-
-      // const res = await fetch("/api/upload", {
-      //   method: "POST",
-      //   body: formData,
-      // });
-
-      // const result = await res.json();
-      // if (result.text) {
-      //   localStorage.setItem("parsedPdfText", result.text);
-      //   console.log("PDF text stored in localStorage.");
-      // } else {
-      //   console.error("Failed to parse PDF:", result.error);
-      // }
     }
   };
 
   return (
+    
+    
     <div className="flex h-screen">
+      <div className="p-4 flex justify-between items-center">
+      <h1 className="text-2xl font-bold">📄 My PDF Tutor</h1>
+      <LogoutButton />
+    </div>
+
+      
       {/* Left side: PDF viewer */}
       <div className="flex-1 flex flex-col">
         <div className="p-2 border-b">
