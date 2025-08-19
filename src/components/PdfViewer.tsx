@@ -1,51 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import { useEffect } from "react";
+import * as pdfjsLib from "pdfjs-dist";
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdfjs-dist/pdf.worker.min.mjs";
 
 type Props = {
-  file: File | string | null;
+  fileUrl: string;
 };
 
-export default function PdfViewer({ file }: Props) {
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
+export default function PDFViewer({ fileUrl }: Props) {
+  useEffect(() => {
+    const loadPdf = async () => {
+      const pdf = await pdfjsLib.getDocument(fileUrl).promise;
+      let allText = "";
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-    setPageNumber(1);
-  }
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map((item: any) => item.str);
+        allText += strings.join(" ") + "\n";
+      }
 
-  if (!file) {
-    return <p className="text-gray-500">No PDF loaded yet</p>;
-  }
+      // ✅ Save text so ChatSidebar can access it
+      localStorage.setItem("pdfText", allText);
+      console.log("✅ Extracted PDF text saved to localStorage:", allText.slice(0, 200) + "...");
+    };
+
+    if (fileUrl) loadPdf();
+  }, [fileUrl]);
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      <Document file={file} onLoadSuccess={onDocumentLoadSuccess}>
-        <Page pageNumber={pageNumber} />
-      </Document>
-      <p>
-        Page {pageNumber} of {numPages}
-      </p>
-      <div className="flex gap-2">
-        <button
-          className="px-3 py-1 border rounded"
-          disabled={pageNumber <= 1}
-          onClick={() => setPageNumber((p) => p - 1)}
-        >
-          Previous
-        </button>
-        <button
-          className="px-3 py-1 border rounded"
-          disabled={numPages === null || pageNumber >= numPages}
-          onClick={() => setPageNumber((p) => p + 1)}
-        >
-          Next
-        </button>
-      </div>
+    <div className="w-full h-full flex items-center justify-center text-gray-600">
+      <embed src={fileUrl} type="application/pdf" className="w-full h-full" />
     </div>
   );
 }

@@ -18,11 +18,19 @@ export default function ChatSidebar() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
+    const pdfText = localStorage.getItem("pdfText") || "";
+
+    // 🔍 Debug print
+    console.log("📤 Sending to /api/chat:", {
+        message: userMessage.text,
+        pdfText: pdfText.slice(0, 100) + "...", // print only first 100 chars for brevity
+    });
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage.text }),
+        body: JSON.stringify({ message: userMessage.text, pdfText }),
       });
 
       const reader = res.body?.getReader();

@@ -1,4 +1,3 @@
-// app/api/chat/route.ts
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 
