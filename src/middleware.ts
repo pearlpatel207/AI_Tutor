@@ -1,9 +1,58 @@
+// import { NextResponse } from "next/server";
+// import type { NextRequest } from "next/server";
+
+// export function middleware(req: NextRequest) {
+//   const token = req.cookies.get("session");
+
+//   const isAuthPage = req.nextUrl.pathname.startsWith("/api/auth");
+
+//   if (!token && !isAuthPage) {
+//     return NextResponse.redirect(new URL("/api/auth", req.url));
+//   }
+
+//   if (token && isAuthPage) {
+//     return NextResponse.redirect(new URL("/", req.url));
+//   }
+
+//   return NextResponse.next();
+// }
+
+// export const config = {
+//   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+// };
+
+
+// import { NextResponse } from "next/server";
+// import type { NextRequest } from "next/server";
+
+// export function middleware(req: NextRequest) {
+//   const token = req.cookies.get("session")?.value;
+
+//   const isAuthPage = req.nextUrl.pathname.startsWith("/login");
+
+//   if (!token && !isAuthPage) {
+//     return NextResponse.redirect(new URL("/login", req.url));
+//   }
+
+//   if (token && isAuthPage) {
+//     return NextResponse.redirect(new URL("/", req.url));
+//   }
+
+//   return NextResponse.next();
+// }
+
+// export const config = {
+//   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+// };
+
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const token = req.cookies.get("session");
+  console.log("🔒 Middleware running for:", req.nextUrl.pathname);
 
+  const token = req.cookies.get("session")?.value;
   const isAuthPage = req.nextUrl.pathname.startsWith("/api/auth");
 
   if (!token && !isAuthPage) {
@@ -11,6 +60,7 @@ export function middleware(req: NextRequest) {
   }
 
   if (token && isAuthPage) {
+    console.log("✅ Logged in, redirecting to home");
     return NextResponse.redirect(new URL("/", req.url));
   }
 
