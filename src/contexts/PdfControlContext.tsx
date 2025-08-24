@@ -4,7 +4,9 @@ import { createContext, useContext, useMemo } from "react";
 type PdfCommand =
   | { type: "goToPage"; page: number }
   | { type: "highlightRect"; page: number; rect: [number, number, number, number]; color?: string }
-  | { type: "clearHighlights"; page?: number };
+  | { type: "clearHighlights"; page?: number }
+  | { type: "highlightText"; page: number; text: string; color: string };
+  
 
 type PdfControl = {
   send: (cmd: PdfCommand) => void;
