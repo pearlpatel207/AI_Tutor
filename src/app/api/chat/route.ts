@@ -25,7 +25,6 @@ const system = [
     "Always highlight the reffered text and navigate to the referred page.",
     "Supported commands:",
     "- goToPage: {\"action\":\"goToPage\",\"page\": NUMBER}",
-    "- highlightRect: {\"action\":\"highlightRect\",\"page\": NUMBER, \"rect\":[x,y,w,h], \"color\":\"#hex or name\"}",
     "- clearHighlights: {\"action\":\"clearHighlights\",\"page\": NUMBER (optional)}",
     "- highlightText: {\"action\":\"highlightText\",\"text\":\"string\",\"page\": NUMBER, \"color\":\"#hex or name\"} — use this if you want to highlight specific words or phrases",
 

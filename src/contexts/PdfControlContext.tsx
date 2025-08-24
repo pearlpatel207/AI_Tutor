@@ -3,9 +3,10 @@ import { createContext, useContext, useMemo } from "react";
 
 type PdfCommand =
   | { type: "goToPage"; page: number }
-  | { type: "highlightRect"; page: number; rect: [number, number, number, number]; color?: string }
   | { type: "clearHighlights"; page?: number }
-  | { type: "highlightText"; page: number; text: string; color: string };
+  | { type: "highlightText"; page: number; start: number, end: number, color: string };
+
+  //| { type: "highlightText"; page: number; text: string; color: string };
   
 
 type PdfControl = {

@@ -57,24 +57,17 @@ export default function ChatSidebar() {
           console.log("➡️ Going to page", raw.page);
           sendPdfCmd({ type: "goToPage", page: raw.page });
   
-        } else if (raw.action === "highlightRect") {
-          console.log("🟨 Highlighting:", raw);
-          sendPdfCmd({
-            type: "highlightRect",
-            page: raw.page,
-            rect: raw.rect,
-            color: raw.color || "yellow",
-          });
-  
-        } else if (raw.action === "clearHighlights") {
+        } 
+        else if (raw.action === "clearHighlights") {
           console.log("🧽 Clearing highlights on page", raw.page);
           sendPdfCmd({ type: "clearHighlights", page: raw.page });
   
         } else if (raw.action === "highlightText") {
-          console.log("🔍 Highlighting text:", raw.text);
+          console.log("🔍 Highlighting text:");
           sendPdfCmd({
             type: "highlightText",
-            text: raw.text,
+            start: raw.start,
+            end: raw.end,
             page: raw.page,
             color: raw.color || "yellow",
           });

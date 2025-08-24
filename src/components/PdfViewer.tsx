@@ -5,6 +5,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import { usePdfControl } from "@/contexts/PdfControlContext";
 import * as pdfjsLib from "pdfjs-dist";
 
+// PDF worker setup
 pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdfjs-dist/pdf.worker.min.mjs";
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs";
 
@@ -14,6 +15,15 @@ type Highlight = {
   color: string;
 };
 
+type TextChunk = {
+  str: string;
+  start: number;
+  end: number;
+  transform: number[];
+  width: number;
+  height: number;
+};
+
 export default function PdfViewer() {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
@@ -21,10 +31,14 @@ export default function PdfViewer() {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
 
+  // 📝 Text + chunk storage
+  const [pageTexts, setPageTexts] = useState<string[]>([]);
+  const [pageChunks, setPageChunks] = useState<Record<number, TextChunk[]>>({});
+
   const containerRef = useRef<HTMLDivElement>(null);
   const { subscribe, send } = usePdfControl();
 
-  // Handle PDF upload
+  // 📂 Handle PDF upload
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
     const file = e.target.files[0];
@@ -35,56 +49,49 @@ export default function PdfViewer() {
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     setPdfDoc(pdf);
 
-    let fullText = "";
+    let allPageTexts: string[] = [];
+    let allPageChunks: Record<number, TextChunk[]> = {};
+
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(" ");
-      fullText += pageText + "\n";
+
+      let pageText = "";
+      let chunks: TextChunk[] = [];
+      let charCount = 0;
+
+      for (const item of textContent.items as any[]) {
+        const str = item.str;
+        const start = charCount;
+        const end = charCount + str.length;
+
+        chunks.push({
+          str,
+          start,
+          end,
+          transform: item.transform,
+          width: item.width,
+          height: item.height,
+        });
+
+        pageText += str;
+        charCount = end;
+      }
+
+      allPageTexts.push(pageText);
+      allPageChunks[i] = chunks;
     }
 
-    localStorage.setItem("pdfText", fullText);
+    setPageTexts(allPageTexts);
+    setPageChunks(allPageChunks);
     setNumPages(pdf.numPages);
   };
 
-  // 🔍 Find rectangle of searched text
-  const findTextRect = async (
-    pageNum: number,
-    searchText: string
-  ): Promise<[number, number, number, number] | null> => {
-    if (!pdfDoc) {
-      console.error("❌ No PDF document loaded");
-      return null;
-    }
-
-    const page = await pdfDoc.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 1.0 });
-    const textContent = await page.getTextContent();
-
-    for (const item of textContent.items as any[]) {
-      if (item.str.toLowerCase().includes(searchText.toLowerCase())) {
-        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-        const x = tx[4];
-        const y = tx[5] - item.height;
-        const w = item.width;
-        const h = item.height;
-
-        const relX = x / viewport.width;
-        const relY = y / viewport.height;
-        const relW = w / viewport.width;
-        const relH = h / viewport.height;
-
-        return [relX, relY, relW, relH];
-      }
-    }
-
-    return null;
-  };
-
+  // 🧠 React to incoming commands (from chat/AI/etc.)
   useEffect(() => {
     if (!pdfDoc) return;
 
-    const unsubscribe = subscribe((cmd) => {
+    const unsubscribe = subscribe(async (cmd) => {
       if (cmd.type === "goToPage") {
         setCurrentPage(cmd.page);
         setTimeout(() => {
@@ -95,20 +102,57 @@ export default function PdfViewer() {
         }, 100);
       }
 
-      if (cmd.type === "highlightRect") {
-        const { page, rect, color = "yellow" } = cmd;
-        setHighlights((prev) => [...prev, { page, rect, color }]);
-      }
-
       if (cmd.type === "highlightText") {
-        const { page, text, color = "yellow" } = cmd;
-        findTextRect(page, text).then((rect) => {
-          if (rect) {
-            setHighlights((prev) => [...prev, { page, rect, color }]);
-          } else {
-            console.warn("Text not found on page", page, text);
-          }
+        const { page, start, end, color = "yellow" } = cmd;
+        const chunks = pageChunks[page];
+        if (!chunks || !pdfDoc) return;
+      
+        const covered = chunks.filter(
+          (c) => !(c.end < start || c.start > end)
+        );
+        if (covered.length === 0) return;
+      
+        const pageObj = await pdfDoc.getPage(page);
+      
+        // ✅ Match scale used in <Page width={600} />
+        const scale = 600 / pageObj.view[2]; // view[2] = page width
+        const viewport = pageObj.getViewport({ scale });
+      
+        function getItemBoundingBox(item: TextChunk) {
+          const transform = pdfjsLib.Util.transform(viewport.transform, item.transform);
+          const x = transform[4];
+          const y = transform[5] - item.height;
+          return {
+            x,
+            y,
+            width: item.width,
+            height: item.height,
+          };
+        }
+      
+        const newHighlights: Highlight[] = covered.map((item) => {
+          const { x, y, width, height } = getItemBoundingBox(item);
+          return {
+            page,
+            rect: [
+              x / viewport.width,
+              y / viewport.height,
+              width / viewport.width,
+              height / viewport.height,
+            ],
+            color,
+          };
         });
+      
+        setHighlights((prev) => [...prev, ...newHighlights]);
+      
+        // 👀 Scroll to first highlight
+        setTimeout(() => {
+          const pageEl = document.getElementById(`page_${page}`);
+          if (pageEl && containerRef.current) {
+            pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 200);
       }
 
       if (cmd.type === "clearHighlights") {
@@ -122,8 +166,9 @@ export default function PdfViewer() {
     });
 
     return () => unsubscribe();
-  }, [subscribe, pdfDoc]);
+  }, [subscribe, pdfDoc, pageChunks]);
 
+  // 🖍️ Render highlight overlays
   const renderHighlights = (pageNum: number) => {
     return highlights
       .filter((hl) => hl.page === pageNum)
@@ -140,6 +185,8 @@ export default function PdfViewer() {
               height: `${h * 100}%`,
               backgroundColor: hl.color,
               opacity: 0.4,
+              borderRadius: "2px",
+              boxShadow: "0 0 3px rgba(0,0,0,0.2)",
               pointerEvents: "none",
             }}
           />
@@ -151,7 +198,7 @@ export default function PdfViewer() {
     <div className="w-2/3 h-screen overflow-auto p-4 border-r" ref={containerRef}>
       <div className="mb-4 space-y-2">
         {/* 🔘 Test Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             className="px-3 py-1 bg-blue-500 text-white text-sm rounded"
             onClick={() => send({ type: "goToPage", page: 3 })}
@@ -159,41 +206,40 @@ export default function PdfViewer() {
             Go to Page 3
           </button>
           <button
-            className="px-3 py-1 bg-yellow-500 text-black text-sm rounded"
-            onClick={() =>
-              send({
-                type: "highlightRect",
-                page: 3,
-                rect: [0.1, 0.2, 0.3, 0.1],
-                color: "orange",
-              })
-            }
-          >
-            Highlight on Page 3
-          </button>
-          <button
-            className="px-3 py-1 bg-red-500 text-white text-sm rounded"
-            onClick={() => send({ type: "clearHighlights", page: 3 })}
-          >
-            Clear Highlights (Page 3)
-          </button>
-          <button
             className="px-3 py-1 bg-green-500 text-white text-sm rounded"
-            onClick={() =>
+            onClick={() => {
+              const page = 1;
+              const start = 50;
+              const end = 80;
+
+              // ✅ Log the exact text being highlighted
+              console.log(
+                `Highlighting text on page ${page}:`,
+                pageTexts[page - 1]?.slice(start, end)
+              );
+
               send({
                 type: "highlightText",
-                text: "Culture",
-                page: 3,
+                page,
+                start,
+                end,
                 color: "yellow",
-              })
-            }
+              });
+            }}
           >
-            Highlight "Culture" on Page 3
+            Highlight Span (50–80 on Page 1)
+          </button>
+
+          <button
+            className="px-3 py-1 bg-red-500 text-white text-sm rounded"
+            onClick={() => send({ type: "clearHighlights", page: 1 })}
+          >
+            Clear Highlights (Page 1)
           </button>
         </div>
       </div>
 
-      {/* PDF Upload */}
+      {/* 📂 PDF Upload */}
       <div className="mb-4">
         <input
           type="file"
@@ -203,7 +249,7 @@ export default function PdfViewer() {
         />
       </div>
 
-      {/* PDF Viewer */}
+      {/* 📄 PDF Viewer */}
       {fileUrl ? (
         <Document
           file={fileUrl}
