@@ -1,4 +1,6 @@
 // app/api/pdf/route.ts
+export const runtime = "nodejs";
+
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getUserIdFromRequest } from "@/lib/auth";
