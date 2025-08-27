@@ -18,6 +18,30 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
   const user = useUser();
 
   useEffect(() => {
+    const fetchMessages = async () => {
+      if (!pdfId) return;
+  
+      try {
+        const res = await fetch(`/api/chat/messages?pdfId=${pdfId}`);
+        const data = await res.json();
+  
+        if (data.messages) {
+          const formattedMessages = data.messages.map((m: any) => ({
+            sender: m.role === "assistant" ? "ai" : "user",
+            text: m.content,
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (err) {
+        console.error("Failed to load chat history", err);
+      }
+    };
+  
+    fetchMessages();
+  }, [pdfId]);
+  
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
