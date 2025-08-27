@@ -1,17 +1,21 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { usePdfControl } from "@/contexts/PdfControlContext";
+import useUser from "@/hooks/useUser";
 
 type Message = { sender: "user" | "ai"; text: string };
 
-export default function ChatSidebar() {
+export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [speaking, setSpeaking] = useState(true);
   const [listening, setListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { send: sendPdfCmd } = usePdfControl();
+
+  const user = useUser();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -82,20 +86,32 @@ export default function ChatSidebar() {
   
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !pdfId || !user) return;
 
     const userMsg: Message = { sender: "user", text: input };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    let pdfText = "";
 
-    const pdfText = localStorage.getItem("pdfText") || "";
+    if (user && user.pdfs.length) {
+      // Load the latest PDF
+      const latestPdf = user.pdfs[user.pdfs.length - 1];
+      pdfText = latestPdf.text ?? "";
+    }
+    //const pdfText = localStorage.getItem("pdfText") || "";
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg.text, pdfText }),
+        body: JSON.stringify({ message: input, pdfText: pdfText, pdfId, userId: user.userId }),
       });
+
+      // const res = await fetch("/api/chat", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ message: userMsg.text, pdfText }),
+      // });
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream from AI");

@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { usePdfControl } from "@/contexts/PdfControlContext";
 import * as pdfjsLib from "pdfjs-dist";
+import useUser, { PdfData } from "@/hooks/useUser";
 
 // PDF worker setup
 pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdfjs-dist/pdf.worker.min.mjs";
@@ -24,24 +27,50 @@ type TextChunk = {
   height: number;
 };
 
-export default function PdfViewer() {
+export default function PdfViewer({ onPdfSelected }: { onPdfSelected: (pdfId: string, pageTexts: string[]) => void }) {
+  const user = useUser();
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [numPages, setNumPages] = useState<number>(0);
+  const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
-
-  // 📝 Text + chunk storage
   const [pageTexts, setPageTexts] = useState<string[]>([]);
   const [pageChunks, setPageChunks] = useState<Record<number, TextChunk[]>>({});
-
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const { subscribe, send } = usePdfControl();
+
+  const [currentPdfId, setCurrentPdfId] = useState<string | null>(null);
+
+  // Track if initial PDF load has happened
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    console.log(user);
+    if (!user || !user.pdfs.length) return;
+    // Load the latest PDF
+    const latestPdf = user.pdfs[user.pdfs.length - 1];
+    setFileUrl(latestPdf.content);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || user.pdfs.length === 0 || initialized) return;
+
+    const pdf: PdfData = user.pdfs[0];
+    setCurrentPdfId(pdf.id);
+    setPageTexts([pdf.content]);
+    onPdfSelected(pdf.id, [pdf.content]);
+
+    setInitialized(true); // prevent re-running this effect
+  }, [user, onPdfSelected, initialized]);
+
 
   // 📂 Handle PDF upload
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
     const file = e.target.files[0];
+    
+    const reader = new FileReader();
+
     const url = URL.createObjectURL(file);
     setFileUrl(url);
 
@@ -85,6 +114,30 @@ export default function PdfViewer() {
     setPageTexts(allPageTexts);
     setPageChunks(allPageChunks);
     setNumPages(pdf.numPages);
+
+    reader.onload = async () => {
+      console.log("FileReader onload triggered");
+      const base64 = reader.result as string;
+
+      const res = await fetch("/api/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: file.name,
+          content: base64,
+          text: allPageTexts.join("\n\n"),
+        }),
+      });
+
+      const data = await res.json();
+      console.log("API response:", data);
+    };
+
+    reader.readAsDataURL(file);
+
+    // localStorage.setItem("pdfText", allPageTexts.join("\n\n"));
+
   };
 
   // 🧠 React to incoming commands (from chat/AI/etc.)

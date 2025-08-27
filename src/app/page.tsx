@@ -1,16 +1,18 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import ChatSidebar from "@/components/ChatSidebar";
+import LogoutButton from "@/components/LogoutButton";
+import { PdfControlProvider } from "@/contexts/PdfControlContext";
 
 const PdfViewer = dynamic(() => import("@/components/PdfViewer"), {
-     ssr: false,
-   });
-
-import ChatSidebar from "@/components/ChatSidebar";
-import { PdfControlProvider } from "@/contexts/PdfControlContext";
-import LogoutButton from "@/components/LogoutButton";
+  ssr: false,
+});
 
 export default function HomePage() {
+  const [currentPdfId, setCurrentPdfId] = useState<string | null>(null);
+  const [pdfText, setPdfText] = useState<string[]>([]);
 
   return (
     <PdfControlProvider>
@@ -21,8 +23,8 @@ export default function HomePage() {
         </div>
       </div>
       <div className="flex">
-        <PdfViewer />
-        <ChatSidebar />
+        <PdfViewer onPdfSelected={(id, text) => { setCurrentPdfId(id); setPdfText(text); }} />
+        <ChatSidebar pdfId={currentPdfId} />
       </div>
     </PdfControlProvider>
   );

@@ -8,21 +8,24 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  createdAt DateTime  @default(now())
-  sessions  Session[]
-  pdfs Pdf[]
+  id          String        @id @default(uuid())
+  email       String        @unique
+  password    String
+  createdAt   DateTime      @default(now())
+  sessions    Session[]
+  pdfs        Pdf[]
+  ChatMessage ChatMessage[]
 }
 
 model Pdf {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  name      String
-  content   String
-  createdAt DateTime @default(now())
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  name        String
+  content     String
+  text        String?
+  createdAt   DateTime      @default(now())
+  ChatMessage ChatMessage[]
 }
 
 model Session {
@@ -31,5 +34,16 @@ model Session {
   user      User     @relation(fields: [userId], references: [id])
   token     String   @unique
   expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  pdfId     String
+  pdf       Pdf      @relation(fields: [pdfId], references: [id])
+  role      String // "user" or "assistant"
+  content   String // message text
   createdAt DateTime @default(now())
 }
