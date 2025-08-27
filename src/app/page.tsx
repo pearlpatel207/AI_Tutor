@@ -18,7 +18,7 @@ export default function HomePage() {
     <PdfControlProvider>
       <div className="flex flex-col h-screen">
         <div className="flex items-center justify-between p-3 border-b">
-          <h1 className="text-xl font-bold">📄 Pearl's PDF Tutor </h1>
+          <h1 className="text-xl font-bold">📄 Pearl&#39;s PDF Tutor </h1>
           <div className="flex gap-2">
             <LogoutButton />
           </div>

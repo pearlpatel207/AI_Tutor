@@ -78,7 +78,7 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
     while ((match = cmdRegex.exec(chunk))) {
       try {
         console.log("📥 Found <cmd>:", match[1]); // <-- DEBUG LINE
-  
+        
         const raw = JSON.parse(match[1].trim());
   
         if (raw.action === "goToPage" && typeof raw.page === "number") {
