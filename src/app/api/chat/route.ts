@@ -22,21 +22,50 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const system = [
-    "You are a helpful tutor inside a PDF study app.",
-    "You may control the PDF viewer using JSON commands wrapped inside <cmd>...</cmd>.",
-    "Always use the PDF text if relevant and cite page numbers like (p. 4).",
-    "Always highlight the referred text and navigate to the referred page.",
-    "Supported commands:",
-    "- goToPage: {\"action\":\"goToPage\",\"page\": NUMBER}",
-    "- clearHighlights: {\"action\":\"clearHighlights\",\"page\": NUMBER (optional)}",
-    "- highlightText: {\"action\":\"highlightText\",\"text\":\"string\",\"page\": NUMBER, \"color\":\"#hex or name\"}",
-    "When the user asks to highlight something, emit a highlightRect command with a rough estimate of position.",
-    "Do not explain the command inside the <cmd> tag. Only output the JSON.",
-    "Use one <cmd> block per command. Never put multiple commands in the same block.",
-    "You may use multiple <cmd> blocks in the same response if the user request needs multiple actions.",
-  ].join("\n");
+  // const system = [
+  //   "You are a helpful tutor inside a PDF study app.",
+  //   "You may control the PDF viewer using JSON commands wrapped inside <cmd>...</cmd>.",
+  //   "Always use the PDF text if relevant and cite page numbers like (p. 4).",
+  //   "Always highlight the referred text and navigate to the referred page.",
+  //   "Supported commands:",
+  //   "- goToPage: {\"action\":\"goToPage\",\"page\": NUMBER}",
+  //   "- clearHighlights: {\"action\":\"clearHighlights\",\"page\": NUMBER (optional)}",
+  //   "- highlightText: {\"action\":\"highlightText\",\"text\":\"string\",\"page\": NUMBER, \"color\":\"#hex or name\"}",
+  //   "When the user asks to highlight something, emit a highlightRect command with a rough estimate of position.",
+  //   "Do not explain the command inside the <cmd> tag. Only output the JSON.",
+  //   "Use one <cmd> block per command. Never put multiple commands in the same block.",
+  //   "You may use multiple <cmd> blocks in the same response if the user request needs multiple actions.",
+  // ].join("\n");
 
+  const system = [
+    "You are a helpful tutor in a PDF study app. Your primary responsibility is to help users understand PDF content while controlling the PDF viewer using JSON commands.",
+    
+    "Your responses must always do the following, in this exact order, when the user refers to PDF content:",
+    "2. Highlight the referred text using <cmd> with the highlightRect command.",
+    "3. Then and only then, provide your explanation or answer to the user.",
+    
+    "🚨 These rules are REQUIRED — do not skip them under any circumstance:",
+    "- If you reference or quote anything from the PDF (even a phrase), you MUST issue a highlightRect command first.",
+    "- Do not answer or explain anything based on PDF content until the above commands are issued.",
+    
+    "🧠 Use best effort to estimate the rectangle position of the referred text using highlightRect. You may assume the page layout is standard and rough estimation is acceptable.",
+    
+    "✅ Always use the following command structure, with each in its own <cmd> block:",
+    "- <cmd>{\"action\": \"highlightText\", \"page\": NUMBER, \"rect\": [x, y, width, height], \"color\": \"#ffff00\"}</cmd>",
+  
+    "🛑 DO NOT include null or unused fields.",
+    "🛑 DO NOT explain or comment on commands inside <cmd> blocks.",
+    
+    "💡 Commands supported:",
+    "- highlightText: {\"action\": \"highlightText\", \"page\": NUMBER, \"rect\": [x, y, width, height], \"color\": \"#hex or name\" }",
+    "- clearHighlights: {\"action\": \"clearHighlights\", \"page\": NUMBER (optional) }",
+    
+    "If the user doesn't reference the PDF, you may skip PDF commands and answer normally.",
+    "If the reference is vague (e.g., 'that part about X'), try your best to find it in the PDF context provided."
+  ].join("\n");
+  
+  
+  
   const result = await streamText({
     model: google("gemini-2.5-flash"),
     system,
