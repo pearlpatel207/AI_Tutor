@@ -16,15 +16,22 @@ export default function HomePage() {
 
   return (
     <PdfControlProvider>
-      <div className="flex items-center justify-between p-3 border-b">
-        <h1 className="text-xl font-bold">📄 PDF Tutor</h1>
-        <div className="flex gap-2">
-          <LogoutButton />
+      <div className="flex flex-col h-screen">
+        <div className="flex items-center justify-between p-3 border-b">
+          <h1 className="text-xl font-bold">📄 Pearl's PDF Tutor </h1>
+          <div className="flex gap-2">
+            <LogoutButton />
+          </div>
         </div>
-      </div>
-      <div className="flex">
-        <PdfViewer onPdfSelected={(id, text) => { setCurrentPdfId(id); setPdfText(text); }} />
-        <ChatSidebar pdfId={currentPdfId} />
+        <div className="flex flex-1 overflow-hidden">
+          <PdfViewer
+            onPdfSelected={(id, text) => {
+              setCurrentPdfId(id);
+              setPdfText(text);
+            }}
+          />
+          <ChatSidebar pdfId={currentPdfId} />
+        </div>
       </div>
     </PdfControlProvider>
   );

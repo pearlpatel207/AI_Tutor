@@ -174,7 +174,7 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
   };
 
   return (
-    <div className="w-1/3 h-screen border-l flex flex-col bg-gray-50">
+    <div className="w-1/3 h-full border-l flex flex-col bg-gray-50">
       {/* Toolbar */}
       <div className="p-3 border-b flex items-center gap-2 bg-white">
         <button
