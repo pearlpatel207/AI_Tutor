@@ -10,6 +10,8 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   const { message, pdfId, userId, pdfText } = await req.json();
 
+  console.log(pdfId, pdfText);
+
   if (!message || !pdfId || !userId) {
     return new Response(JSON.stringify({ error: "Missing message, pdfId, or userId" }), { status: 400 });
   }
@@ -23,21 +25,6 @@ export async function POST(req: NextRequest) {
       content: message,
     },
   });
-
-  // const system = [
-  //   "You are a helpful tutor inside a PDF study app.",
-  //   "You may control the PDF viewer using JSON commands wrapped inside <cmd>...</cmd>.",
-  //   "Always use the PDF text if relevant and cite page numbers like (p. 4).",
-  //   "Always highlight the referred text and navigate to the referred page.",
-  //   "Supported commands:",
-  //   "- goToPage: {\"action\":\"goToPage\",\"page\": NUMBER}",
-  //   "- clearHighlights: {\"action\":\"clearHighlights\",\"page\": NUMBER (optional)}",
-  //   "- highlightText: {\"action\":\"highlightText\",\"text\":\"string\",\"page\": NUMBER, \"color\":\"#hex or name\"}",
-  //   "When the user asks to highlight something, emit a highlightRect command with a rough estimate of position.",
-  //   "Do not explain the command inside the <cmd> tag. Only output the JSON.",
-  //   "Use one <cmd> block per command. Never put multiple commands in the same block.",
-  //   "You may use multiple <cmd> blocks in the same response if the user request needs multiple actions.",
-  // ].join("\n");
 
   const system = [
     "You are a helpful tutor in a PDF study app. Your primary responsibility is to help users understand PDF content while controlling the PDF viewer using JSON commands.",

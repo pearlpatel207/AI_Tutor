@@ -5,12 +5,14 @@ import dynamic from "next/dynamic";
 import ChatSidebar from "@/components/ChatSidebar";
 import LogoutButton from "@/components/LogoutButton";
 import { PdfControlProvider } from "@/contexts/PdfControlContext";
+import { useRouter } from "next/navigation";
 
 const PdfViewer = dynamic(() => import("@/components/PdfViewer"), {
   ssr: false,
 });
 
 export default function HomePage() {
+  const router = useRouter();
   const [currentPdfId, setCurrentPdfId] = useState<string | null>(null);
   const [pdfText, setPdfText] = useState<string[]>([]);
 
@@ -28,9 +30,10 @@ export default function HomePage() {
             onPdfSelected={(id, text) => {
               setCurrentPdfId(id);
               setPdfText(text);
+              // window.location.reload();
             }}
           />
-          <ChatSidebar pdfId={currentPdfId} />
+          <ChatSidebar key={currentPdfId} pdfId={currentPdfId} />
         </div>
       </div>
     </PdfControlProvider>

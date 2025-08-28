@@ -16,15 +16,26 @@ export type UserData = {
 export default function useUser() {
   const [user, setUser] = useState<UserData | null>(null);
 
+  const fetchUser = async () => {
+    const res = await fetch("/api/me");
+    if (!res.ok) return;
+    const data = await res.json();
+    setUser(data);
+  };
+
+  // Fetch on mount
   useEffect(() => {
-    const fetchUser = async () => {
-      const res = await fetch("/api/me");
-      if (!res.ok) return;
-      const data = await res.json();
-      setUser(data);
-    };
     fetchUser();
   }, []);
 
-  return user;
+  // Log whenever user changes
+  useEffect(() => {
+    if (user) {
+      console.log("🧑‍💻 User refreshed:", user);
+      console.log("📂 Number of PDFs:", user.pdfs.length);
+    }
+  }, [user]);
+
+  // Expose setUser in case we want to manually update locally
+  return { user, refresh: fetchUser, setUser };
 }

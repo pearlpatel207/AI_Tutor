@@ -28,7 +28,7 @@ type TextChunk = {
 };
 
 export default function PdfViewer({ onPdfSelected }: { onPdfSelected: (pdfId: string, pageTexts: string[]) => void }) {
-  const user = useUser();
+  const { user, refresh } = useUser();
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -53,16 +53,16 @@ export default function PdfViewer({ onPdfSelected }: { onPdfSelected: (pdfId: st
 
   }, [user]);
 
-  // useEffect(() => {
-  //   if (!user || user.pdfs.length === 0 || initialized) return;
+  useEffect(() => {
+    if (!user || user.pdfs.length === 0 || initialized) return;
 
-  //   const pdf: PdfData = user.pdfs[0];
-  //   setCurrentPdfId(pdf.id);
-  //   setPageTexts([pdf.content]);
-  //   onPdfSelected(pdf.id, [pdf.content]);
+    const pdf: PdfData = user.pdfs[user.pdfs.length-1];
+    setCurrentPdfId(pdf.id);
+    setPageTexts([pdf.content]);
+    onPdfSelected(pdf.id, [pdf.content]);
 
-  //   setInitialized(true); // prevent re-running this effect
-  // }, [user, onPdfSelected, initialized]);
+    setInitialized(true); // prevent re-running this effect
+  }, [user, onPdfSelected, initialized]);
 
 
   // 📂 Handle PDF upload
@@ -115,7 +115,7 @@ export default function PdfViewer({ onPdfSelected }: { onPdfSelected: (pdfId: st
     setPageTexts(allPageTexts);
     setPageChunks(allPageChunks);
     setNumPages(pdf.numPages);
-
+    
     reader.onload = async () => {
       console.log("FileReader onload triggered");
       const base64 = reader.result as string;
@@ -132,7 +132,13 @@ export default function PdfViewer({ onPdfSelected }: { onPdfSelected: (pdfId: st
       });
 
       const data = await res.json();
-      console.log("API response:", data);
+      console.log("API response:", data, data.pdf.id);
+
+      if (data.pdf.id) {
+        await refresh();
+        onPdfSelected(data.pdf.id, data.pdf.text);
+      }
+
     };
 
     reader.readAsDataURL(file);
@@ -144,8 +150,10 @@ export default function PdfViewer({ onPdfSelected }: { onPdfSelected: (pdfId: st
   useEffect(() => {
     const loadInitialPdf = async () => {
       if (!user || !user.pdfs.length || initialized) return;
+
+      // console.log(user.pdfs.length);
   
-      const pdf: PdfData = user.pdfs[0]; // or user.pdfs[user.pdfs.length - 1]
+      const pdf: PdfData = user.pdfs[user.pdfs.length - 1];
       setCurrentPdfId(pdf.id);
   
       const loadingTask = pdfjsLib.getDocument({ url: pdf.content });

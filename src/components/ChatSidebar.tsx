@@ -14,8 +14,11 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
   const [listening, setListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { send: sendPdfCmd } = usePdfControl();
+  const { user, refresh } = useUser();
 
-  const user = useUser();
+  useEffect(() => {
+    console.log("Refreshed, PDFid:", pdfId);
+  }, [pdfId]);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -110,6 +113,9 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
   
 
   const sendMessage = async () => {
+    
+    await refresh(); 
+
     if (!input.trim() || !pdfId || !user) return;
 
     const userMsg: Message = { sender: "user", text: input };
@@ -122,6 +128,7 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
       const latestPdf = user.pdfs[user.pdfs.length - 1];
       pdfText = latestPdf.text ?? "";
     }
+    console.log("Text: ", pdfText);
     //const pdfText = localStorage.getItem("pdfText") || "";
 
     try {
@@ -130,12 +137,6 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: input, pdfText: pdfText, pdfId, userId: user.userId }),
       });
-
-      // const res = await fetch("/api/chat", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ message: userMsg.text, pdfText }),
-      // });
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream from AI");
