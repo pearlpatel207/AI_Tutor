@@ -17,7 +17,7 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
   const { user, refresh } = useUser();
 
   useEffect(() => {
-    console.log("Refreshed, PDFid:", pdfId);
+    // console.log("Refreshed, PDFid:", pdfId);
   }, [pdfId]);
 
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function ChatSidebar({ pdfId }: { pdfId: string | null }) {
       const latestPdf = user.pdfs[user.pdfs.length - 1];
       pdfText = latestPdf.text ?? "";
     }
-    console.log("Text: ", pdfText);
+    // console.log("Text: ", pdfText);
     //const pdfText = localStorage.getItem("pdfText") || "";
 
     try {

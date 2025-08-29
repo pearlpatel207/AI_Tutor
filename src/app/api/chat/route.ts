@@ -10,11 +10,22 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   const { message, pdfId, userId, pdfText } = await req.json();
 
-  console.log(pdfId, pdfText);
+  // console.log(pdfId, pdfText);
 
   if (!message || !pdfId || !userId) {
     return new Response(JSON.stringify({ error: "Missing message, pdfId, or userId" }), { status: 400 });
   }
+
+  const previousMessages = await prisma.chatMessage.findMany({
+    where: { pdfId, userId },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+
+  const history = previousMessages.reverse().map(m => ({
+    role: m.role as "user" | "assistant",
+    content: m.content,
+  }));
 
   // Save user message right away
   await prisma.chatMessage.create({
@@ -40,13 +51,13 @@ export async function POST(req: NextRequest) {
     "🧠 Use best effort to estimate the rectangle position of the referred text using highlightRect. You may assume the page layout is standard and rough estimation is acceptable.",
     
     "✅ Always use the following command structure, with each in its own <cmd> block:",
-    "- <cmd>{\"action\": \"highlightText\", \"page\": NUMBER, \"rect\": [x, y, width, height], \"color\": \"#ffff00\"}</cmd>",
+    "- <cmd>{\"action\": \"highlightText\", \"start\": NUMBER, \"end\": NUMBER \"page\": NUMBER, \"color\": \"#hex or name\"}</cmd>",
   
     "🛑 DO NOT include null or unused fields.",
     "🛑 DO NOT explain or comment on commands inside <cmd> blocks.",
     
     "💡 Commands supported:",
-    "- highlightText: {\"action\": \"highlightText\", \"page\": NUMBER, \"rect\": [x, y, width, height], \"color\": \"#hex or name\" }",
+    "- highlightText: {\"action\": \"highlightText\", \"start\": NUMBER, \"end\": NUMBER \"page\": NUMBER, \"color\": \"#hex or name\" }",
     "- clearHighlights: {\"action\": \"clearHighlights\", \"page\": NUMBER (optional) }",
     
     "If the user doesn't reference the PDF, you may skip PDF commands and answer normally.",
@@ -59,10 +70,14 @@ export async function POST(req: NextRequest) {
     model: google("gemini-2.5-flash"),
     system,
     messages: [
-      { role: "user", content: `PDF Context:\n${pdfText}\n\nUser: ${message}` }
+      { role: "user", content: `PDF Context:\n${pdfText}\n\nUser: ${message}` },
+      ...history,
+      { role: "user", content: message },
     ],
     
   });
+
+  console.log("🚀 Final Payload to Gemini:", JSON.stringify(result, null, 2));
 
   // Get a Response that contains the streaming body
   const textResponse = await result.toTextStreamResponse();

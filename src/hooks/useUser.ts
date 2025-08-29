@@ -32,7 +32,7 @@ export default function useUser() {
   useEffect(() => {
     if (user) {
       console.log("🧑‍💻 User refreshed:", user);
-      console.log("📂 Number of PDFs:", user.pdfs.length);
+      // console.log("📂 Number of PDFs:", user.pdfs.length);
     }
   }, [user]);
 
